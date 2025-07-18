@@ -25,11 +25,16 @@ import {
 import * as MediaLibrary from "expo-media-library";
 import { Nullable } from "@/types";
 import CameraPermissionDialogBox from "@/components/CameraPermissionDialogBox";
+import NetInfo, { NetInfoStateType } from "@react-native-community/netinfo";
+import { dbManager, DbManager } from "@/db";
+import { useAuth } from "@/contexts/AuthContext";
+import { API } from "@/api";
 
 export default function CameraRecorder() {
   const router = useRouter();
 
   const { donorId } = useLocalSearchParams();
+  const { user, error, isLoading } = useAuth();
   const [facing, setFacing] = useState<CameraType>("back");
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [isRecording, setIsRecording] = useState(false);
@@ -52,19 +57,43 @@ export default function CameraRecorder() {
   }, []);
 
   const startRecording = async () => {
-    if (cameraRef.current && !isRecording) {
-      try {
-        setIsRecording(true);
-        const video = await cameraRef.current.recordAsync();
-        if (video && video.uri) {
-          await MediaLibrary.saveToLibraryAsync(video.uri);
-        }
-      } catch (error) {
-        throw error;
-      } finally {
-        setIsRecording(false);
+    const recordVideo = async () => {
+      if (!cameraRef.current || isRecording) return;
+
+      setIsRecording(true);
+
+      const video = await cameraRef.current.recordAsync();
+      if (!video || !video.uri) return;
+
+      // save the file in the storage
+      await MediaLibrary.saveToLibraryAsync(video.uri);
+
+      return video.uri;
+    };
+
+    const saveOnDb = async (uri: string) => {
+      // if its not connected, save the video in the local db
+      if (!state.isConnected) {
+        await dbManager.saveVideo({
+          uri,
+          donorId: donorId as string,
+        });
       }
-    }
+    };
+
+    const uploadOnTheBackend = async (uri: string) => {
+      return dbManager.saveVideo({
+        uri,
+        donorId: donorId as string,
+      });
+    };
+
+    const all = async () => {
+      const uri = (await recordVideo()) as string;
+      const state = await NetInfo.fetch();
+      if (state.isConnected) return uploadOnTheBackend(uri);
+      return saveOnDb(uri);
+    };
   };
 
   const stopRecording = () => {
