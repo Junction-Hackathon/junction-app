@@ -23,11 +23,11 @@ export default function SacrificerSettingsScreen() {
           <View style={styles.profileCard}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
-                {user?.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                {user?.firstName?.split(' ').map(n => n[0]).join('') || 'U'}
               </Text>
             </View>
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{user?.name}</Text>
+              <Text style={styles.profileName}>{user?.firstName}</Text>
               <Text style={styles.profileEmail}>{user?.email}</Text>
               <Text style={styles.profileRole}>Sacrifice Executor</Text>
             </View>

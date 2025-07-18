@@ -1,54 +1,66 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
-import { ArrowLeft, Video, Square, RotateCcw, Check } from 'lucide-react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import {
+  ArrowLeft,
+  Video,
+  Square,
+  RotateCcw,
+  Check,
+} from "lucide-react-native";
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  use,
+  Suspense,
+} from "react";
+import { View, Button, StyleSheet, Text, TouchableOpacity } from "react-native";
+import {
+  CameraType,
+  CameraView,
+  useCameraPermissions,
+  useMicrophonePermissions,
+} from "expo-camera";
+import * as MediaLibrary from "expo-media-library";
+import { Nullable } from "@/types";
+import CameraPermissionDialogBox from "@/components/CameraPermissionDialogBox";
 
-export default function RecordVideoScreen() {
-  const { donorId } = useLocalSearchParams();
+export default function CameraRecorder() {
   const router = useRouter();
-  const [facing, setFacing] = useState<CameraType>('back');
-  const [permission, requestPermission] = useCameraPermissions();
+
+  const { donorId } = useLocalSearchParams();
+  const [facing, setFacing] = useState<CameraType>("back");
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [isRecording, setIsRecording] = useState(false);
-  const [recordedVideo, setRecordedVideo] = useState<string | null>(null);
-  const cameraRef = useRef<CameraView>(null);
+  const [recordedVideo, setRecordedVideo] = useState<Nullable<string>>(null);
+  const cameraRef = useRef<Nullable<CameraView>>(null);
+  const [micPermission, requestMicrophonePermission] =
+    useMicrophonePermissions();
+  const [mediaPermission, setMediaPermission] =
+    useState<Nullable<boolean>>(null);
 
-  if (!permission) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.permissionText}>Loading camera...</Text>
-      </SafeAreaView>
-    );
-  }
+  const getPermissions = useCallback(async () => {
+    const mediaStatus = await MediaLibrary.requestPermissionsAsync();
+    setMediaPermission(mediaStatus.status === "granted");
+    await requestCameraPermission();
+    await requestMicrophonePermission();
+  }, [micPermission, cameraPermission]);
 
-  if (!permission.granted) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.permissionContainer}>
-          <Text style={styles.permissionTitle}>Camera Permission Required</Text>
-          <Text style={styles.permissionText}>
-            We need camera access to record sacrifice videos
-          </Text>
-          <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-            <Text style={styles.permissionButtonText}>Grant Permission</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  useEffect(() => {
+    getPermissions();
+  }, []);
 
   const startRecording = async () => {
-    if (cameraRef.current) {
+    if (cameraRef.current && !isRecording) {
       try {
         setIsRecording(true);
-        const video = await cameraRef.current.recordAsync({
-          quality: '720p',
-          maxDuration: 300, // 5 minutes max
-        });
-        setRecordedVideo(video.uri);
+        const video = await cameraRef.current.recordAsync();
+        if (video && video.uri) {
+          await MediaLibrary.saveToLibraryAsync(video.uri);
+        }
       } catch (error) {
-        Alert.alert('Error', 'Failed to record video');
+        throw error;
       } finally {
         setIsRecording(false);
       }
@@ -58,22 +70,7 @@ export default function RecordVideoScreen() {
   const stopRecording = () => {
     if (cameraRef.current && isRecording) {
       cameraRef.current.stopRecording();
-    }
-  };
-
-  const saveVideo = () => {
-    if (recordedVideo) {
-      // Save video locally and add to upload queue
-      Alert.alert(
-        'Video Saved',
-        'Video has been saved locally and will be uploaded when connection is available.',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back(),
-          },
-        ]
-      );
+      return router.push("/");
     }
   };
 
@@ -82,14 +79,53 @@ export default function RecordVideoScreen() {
   };
 
   const toggleCameraFacing = () => {
-    setFacing(current => (current === 'back' ? 'front' : 'back'));
+    setFacing((current) => (current === "back" ? "front" : "back"));
   };
+
+  if (!cameraPermission || !micPermission || mediaPermission === null) {
+    return (
+      <View>
+        <Text>Loading permissions...</Text>
+      </View>
+    );
+  }
+
+  if (!cameraPermission.granted) {
+    return (
+      <CameraPermissionDialogBox
+        requestCameraPermission={requestCameraPermission}
+      />
+    );
+  }
+
+  if (!micPermission.granted) {
+    return (
+      <View>
+        <Text>Microphone permission is required</Text>
+        <Button
+          title="Grant Permission"
+          onPress={requestMicrophonePermission}
+        />
+      </View>
+    );
+  }
+
+  if (!mediaPermission) {
+    return (
+      <View>
+        <Text>Media library permission is required to save videos</Text>
+      </View>
+    );
+  }
 
   if (recordedVideo) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
             <ArrowLeft size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Video Recorded</Text>
@@ -98,7 +134,8 @@ export default function RecordVideoScreen() {
         <View style={styles.previewContainer}>
           <Text style={styles.previewText}>Video recorded successfully!</Text>
           <Text style={styles.previewSubtext}>
-            The video will be uploaded automatically when internet connection is available.
+            The video will be uploaded automatically when internet connection is
+            available.
           </Text>
         </View>
 
@@ -107,7 +144,7 @@ export default function RecordVideoScreen() {
             <RotateCcw size={20} color="#F59E0B" />
             <Text style={styles.retakeText}>Retake</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.saveButton} onPress={saveVideo}>
+          <TouchableOpacity style={styles.saveButton} onPress={stopRecording}>
             <Check size={20} color="#FFFFFF" />
             <Text style={styles.saveText}>Save Video</Text>
           </TouchableOpacity>
@@ -119,14 +156,19 @@ export default function RecordVideoScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
           <ArrowLeft size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Record Sacrifice</Text>
       </View>
 
       <View style={styles.instructionsContainer}>
-        <Text style={styles.instructionsTitle}>بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ</Text>
+        <Text style={styles.instructionsTitle}>
+          بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ
+        </Text>
         <Text style={styles.instructionsText}>
           Please record the complete sacrifice process clearly
         </Text>
@@ -139,7 +181,10 @@ export default function RecordVideoScreen() {
         mode="video"
       >
         <View style={styles.cameraOverlay}>
-          <TouchableOpacity style={styles.flipButton} onPress={toggleCameraFacing}>
+          <TouchableOpacity
+            style={styles.flipButton}
+            onPress={toggleCameraFacing}
+          >
             <RotateCcw size={24} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
@@ -151,9 +196,12 @@ export default function RecordVideoScreen() {
               <Text style={styles.recordingText}>Recording...</Text>
             </View>
           )}
-          
+
           <TouchableOpacity
-            style={[styles.recordButton, isRecording && styles.recordButtonActive]}
+            style={[
+              styles.recordButton,
+              isRecording && styles.recordButtonActive,
+            ]}
             onPress={isRecording ? stopRecording : startRecording}
           >
             {isRecording ? (
@@ -171,62 +219,62 @@ export default function RecordVideoScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: "#000000",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 20,
-    backgroundColor: '#065F46',
+    backgroundColor: "#065F46",
   },
   backButton: {
     marginRight: 16,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   instructionsContainer: {
-    backgroundColor: '#065F46',
+    backgroundColor: "#065F46",
     padding: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   instructionsTitle: {
     fontSize: 18,
-    color: '#F59E0B',
-    fontWeight: '600',
+    color: "#F59E0B",
+    fontWeight: "600",
     marginBottom: 8,
   },
   instructionsText: {
     fontSize: 14,
-    color: '#A7F3D0',
-    textAlign: 'center',
+    color: "#A7F3D0",
+    textAlign: "center",
   },
   camera: {
     flex: 1,
   },
   cameraOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 20,
     right: 20,
   },
   flipButton: {
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     borderRadius: 25,
     padding: 10,
   },
   recordingControls: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 40,
     left: 0,
     right: 0,
-    alignItems: 'center',
+    alignItems: "center",
   },
   recordingIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -236,109 +284,109 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#EF4444',
+    backgroundColor: "#EF4444",
     marginRight: 8,
   },
   recordingText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   recordButton: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: "#F59E0B",
     borderRadius: 40,
     padding: 20,
   },
   recordButtonActive: {
-    backgroundColor: '#EF4444',
+    backgroundColor: "#EF4444",
   },
   permissionContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   permissionTitle: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#1F2937',
+    fontWeight: "700",
+    color: "#1F2937",
     marginBottom: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
   permissionText: {
     fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
+    color: "#6B7280",
+    textAlign: "center",
     marginBottom: 24,
     lineHeight: 24,
   },
   permissionButton: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: "#F59E0B",
     borderRadius: 12,
     paddingHorizontal: 24,
     paddingVertical: 12,
   },
   permissionButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
   previewContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
   },
   previewText: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#065F46',
+    fontWeight: "700",
+    color: "#065F46",
     marginBottom: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
   previewSubtext: {
     fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
+    color: "#6B7280",
+    textAlign: "center",
     lineHeight: 24,
   },
   previewActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: 20,
     gap: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
   },
   retakeButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     paddingVertical: 16,
     borderWidth: 2,
-    borderColor: '#F59E0B',
+    borderColor: "#F59E0B",
   },
   retakeText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#F59E0B',
+    fontWeight: "600",
+    color: "#F59E0B",
   },
   saveButton: {
     flex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
-    backgroundColor: '#10B981',
+    backgroundColor: "#10B981",
     borderRadius: 12,
     paddingVertical: 16,
   },
   saveText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
 });

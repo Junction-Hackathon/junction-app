@@ -87,7 +87,7 @@ export default function SacrificerDonorsScreen() {
         <View style={styles.headerTop}>
           <View>
             <Text style={styles.greeting}>السلام عليكم</Text>
-            <Text style={styles.userName}>{user?.name}</Text>
+            <Text style={styles.userName}>{user?.firstName}</Text>
           </View>
           <View style={styles.connectionStatus}>
             {isOnline ? (

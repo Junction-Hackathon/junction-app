@@ -1,58 +1,85 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
-import { useAuth } from '@/contexts/AuthContext';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  ScrollView,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { ArrowLeft, Eye, EyeOff } from "lucide-react-native";
+import { useAuth } from "@/contexts/AuthContext";
+import { UserRole } from "@/types/user";
+import { AxiosError } from "axios";
+import { Nullable } from "@/types";
 
 export default function RegisterScreen() {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    phone: '',
-    region: '',
-    role: 'donor' as 'sacrificer' | 'donor',
+    firstName: "Mohammed Djaoued",
+    lastName: "Bouhadda",
+    email: "bhdmeddjaoued@gmail.com",
+    password: "Djaouedouu124@",
+    confirmPassword: "Djaouedouu124@",
+    phone: "0698690027",
+    role: UserRole.DONOR,
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  const { register } = useAuth();
+
+  const { register, user, error, isLoading } = useAuth();
+
+  const [globalError, setGlobalError] = useState<Nullable<string>>(null);
+
   const router = useRouter();
 
   const handleRegister = async () => {
-    if (!formData.name || !formData.email || !formData.password) {
-      Alert.alert('Error', 'Please fill in all required fields');
+    if (
+      !formData.firstName ||
+      !formData.lastName ||
+      !formData.email ||
+      !formData.password
+    ) {
+      Alert.alert("Error", "Please fill in all required fields");
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert("Error", "Passwords do not match");
       return;
     }
 
-    setIsLoading(true);
-    try {
-      await register({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        role: formData.role,
-        phone: formData.phone,
-        region: formData.region,
-      });
-    } catch (error) {
-      Alert.alert('Registration Failed', 'Please try again');
-    } finally {
-      setIsLoading(false);
-    }
+    await register({
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      password: formData.password,
+      confirmPassword: formData.confirmPassword,
+      role: formData.role,
+      phoneNumber: formData.phone,
+    });
   };
+
+  useEffect(() => {
+    if (!error) return;
+    console.log(error);
+    if (error instanceof AxiosError) {
+      if (error.status === 400)
+        return setGlobalError(error.response?.data.message);
+
+      if (error.status === 401)
+        return setGlobalError("Invalid email or password");
+    }
+    return setGlobalError("Unknown error.");
+  }, [error]);
+
+  if (!isLoading && user !== null) return router.push("/");
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
@@ -69,28 +96,38 @@ export default function RegisterScreen() {
               <TouchableOpacity
                 style={[
                   styles.roleButton,
-                  formData.role === 'donor' && styles.roleButtonActive
+                  formData.role === UserRole.DONOR && styles.roleButtonActive,
                 ]}
-                onPress={() => setFormData(prev => ({ ...prev, role: 'donor' }))}
+                onPress={() =>
+                  setFormData((prev) => ({ ...prev, role: UserRole.DONOR }))
+                }
               >
-                <Text style={[
-                  styles.roleButtonText,
-                  formData.role === 'donor' && styles.roleButtonTextActive
-                ]}>
+                <Text
+                  style={[
+                    styles.roleButtonText,
+                    formData.role === UserRole.DONOR &&
+                      styles.roleButtonTextActive,
+                  ]}
+                >
                   Donor
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
                   styles.roleButton,
-                  formData.role === 'sacrificer' && styles.roleButtonActive
+                  formData.role === UserRole.DABAH && styles.roleButtonActive,
                 ]}
-                onPress={() => setFormData(prev => ({ ...prev, role: 'sacrificer' }))}
+                onPress={() =>
+                  setFormData((prev) => ({ ...prev, role: UserRole.DABAH }))
+                }
               >
-                <Text style={[
-                  styles.roleButtonText,
-                  formData.role === 'sacrificer' && styles.roleButtonTextActive
-                ]}>
+                <Text
+                  style={[
+                    styles.roleButtonText,
+                    formData.role === UserRole.DABAH &&
+                      styles.roleButtonTextActive,
+                  ]}
+                >
                   Sacrificer
                 </Text>
               </TouchableOpacity>
@@ -98,11 +135,26 @@ export default function RegisterScreen() {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Full Name *</Text>
+            <Text style={styles.label}>First Name *</Text>
             <TextInput
               style={styles.input}
-              value={formData.name}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
+              value={formData.firstName}
+              onChangeText={(text) =>
+                setFormData((prev) => ({ ...prev, firstName: text }))
+              }
+              placeholder="Enter your full name"
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Last Name *</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.lastName}
+              onChangeText={(text) =>
+                setFormData((prev) => ({ ...prev, lastName: text }))
+              }
               placeholder="Enter your full name"
               placeholderTextColor="#9CA3AF"
             />
@@ -113,7 +165,9 @@ export default function RegisterScreen() {
             <TextInput
               style={styles.input}
               value={formData.email}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, email: text }))}
+              onChangeText={(text) =>
+                setFormData((prev) => ({ ...prev, email: text }))
+              }
               placeholder="Enter your email"
               placeholderTextColor="#9CA3AF"
               keyboardType="email-address"
@@ -126,21 +180,12 @@ export default function RegisterScreen() {
             <TextInput
               style={styles.input}
               value={formData.phone}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, phone: text }))}
+              onChangeText={(text) =>
+                setFormData((prev) => ({ ...prev, phone: text }))
+              }
               placeholder="+92 300 1234567"
               placeholderTextColor="#9CA3AF"
               keyboardType="phone-pad"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Region</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.region}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, region: text }))}
-              placeholder="e.g., Karachi Central"
-              placeholderTextColor="#9CA3AF"
             />
           </View>
 
@@ -150,7 +195,9 @@ export default function RegisterScreen() {
               <TextInput
                 style={styles.passwordInput}
                 value={formData.password}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, password: text }))}
+                onChangeText={(text) =>
+                  setFormData((prev) => ({ ...prev, password: text }))
+                }
                 placeholder="Enter your password"
                 placeholderTextColor="#9CA3AF"
                 secureTextEntry={!showPassword}
@@ -173,27 +220,37 @@ export default function RegisterScreen() {
             <TextInput
               style={styles.input}
               value={formData.confirmPassword}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, confirmPassword: text }))}
+              onChangeText={(text) =>
+                setFormData((prev) => ({ ...prev, confirmPassword: text }))
+              }
               placeholder="Confirm your password"
               placeholderTextColor="#9CA3AF"
               secureTextEntry={!showPassword}
             />
           </View>
 
-          <TouchableOpacity 
-            style={[styles.registerButton, isLoading && styles.registerButtonDisabled]}
+          <View>
+            <Text style={styles.errorMessage}>{globalError}</Text>
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.registerButton,
+              isLoading && styles.registerButtonDisabled,
+            ]}
             onPress={handleRegister}
             disabled={isLoading}
           >
             <Text style={styles.registerButtonText}>
-              {isLoading ? 'Creating Account...' : 'Create Account'}
+              {isLoading ? "Creating Account..." : "Create Account"}
             </Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity onPress={() => router.push('/auth/login')}>
+        <TouchableOpacity onPress={() => router.push("/auth/login")}>
           <Text style={styles.loginLink}>
-            Already have an account? <Text style={styles.loginLinkBold}>Sign In</Text>
+            Already have an account?{" "}
+            <Text style={styles.loginLinkBold}>Sign In</Text>
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -202,13 +259,17 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
+  errorMessage: {
+    color: "rgba(255, 40, 40, 1)",
+    fontSize: 16,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#065F46',
+    backgroundColor: "#065F46",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 20,
     paddingTop: 10,
   },
@@ -217,12 +278,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   content: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
@@ -234,72 +295,72 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   roleButtons: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   roleButton: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: "#F9FAFB",
     borderRadius: 12,
     paddingVertical: 12,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: "#E5E7EB",
   },
   roleButtonActive: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#10B981',
+    backgroundColor: "#F0FDF4",
+    borderColor: "#10B981",
   },
   roleButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#6B7280',
+    fontWeight: "600",
+    color: "#6B7280",
   },
   roleButtonTextActive: {
-    color: '#10B981',
+    color: "#10B981",
   },
   inputContainer: {
     marginBottom: 20,
   },
   label: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontWeight: "600",
+    color: "#1F2937",
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: "#F9FAFB",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    color: '#1F2937',
+    borderColor: "#E5E7EB",
+    color: "#1F2937",
   },
   passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F9FAFB",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: "#E5E7EB",
   },
   passwordInput: {
     flex: 1,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#1F2937',
+    color: "#1F2937",
   },
   eyeButton: {
     padding: 14,
   },
   registerButton: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: "#F59E0B",
     borderRadius: 12,
     paddingVertical: 16,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 8,
   },
   registerButtonDisabled: {
@@ -307,16 +368,16 @@ const styles = StyleSheet.create({
   },
   registerButtonText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
   loginLink: {
     fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
+    color: "#6B7280",
+    textAlign: "center",
   },
   loginLinkBold: {
-    fontWeight: '600',
-    color: '#F59E0B',
+    fontWeight: "600",
+    color: "#F59E0B",
   },
 });

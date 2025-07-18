@@ -4,10 +4,11 @@ import { AuthState } from "@/types/auth";
 import { STORAGE_KEYS } from "@/constants/storage";
 import tryCatch from "@/utils/try-catch";
 import { API } from "@/api";
-import { LoginUserRequestData } from "@/api/types/auth";
+import { LoginUserRequestData, RegisterUserData } from "@/api/types/auth";
 
 interface AuthContextType extends AuthState {
   login: (data: LoginUserRequestData) => Promise<void>;
+  register: (data: RegisterUserData) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -64,7 +65,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (data === null)
       return setAuthState((prev) => ({
         ...prev,
-        error: new Error("Unkown error."),
+        error: new Error("Unknown error."),
+        isLoading: false,
+      }));
+
+    await AsyncStorage.setItem(
+      STORAGE_KEYS.USER,
+      JSON.stringify(data.value.user)
+    );
+
+    await AsyncStorage.setItem(
+      STORAGE_KEYS.accessToken,
+      JSON.stringify(data.value.accessToken)
+    );
+
+    setAuthState({
+      user: data.value.user,
+      isLoading: false,
+      isAuthenticated: true,
+      error: null,
+    });
+  };
+
+  const register = async (registerUserData: RegisterUserData) => {
+    setAuthState((prev) => ({ ...prev, isLoading: true }));
+
+    const [data, err] = await tryCatch(async () =>
+      API.Auth.registerUser(registerUserData)
+    );
+
+    if (err !== null)
+      return setAuthState((prev) => ({
+        ...prev,
+        error: err,
+        isLoading: false,
+      }));
+
+    if (data === null)
+      return setAuthState((prev) => ({
+        ...prev,
+        error: new Error("Unknown error."),
         isLoading: false,
       }));
 
@@ -98,7 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ ...authState, login, logout }}>
+    <AuthContext.Provider value={{ ...authState, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

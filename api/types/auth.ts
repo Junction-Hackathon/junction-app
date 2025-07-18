@@ -1,4 +1,4 @@
-import { User } from "@/types/user";
+import { User, UserRole } from "@/types/user";
 
 export type LoginUserRequestData = {
     email: string;
@@ -11,5 +11,24 @@ export type LoginUserResponseData = {
        accessToken: string;
        refreshToken: string;
        user: User; 
+    }
+}
+
+export type RegisterUserData = {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phoneNumber: string;
+    password: string;
+    confirmPassword: string;
+    role: UserRole;
+}
+
+export type RegisterUserResponseData = {
+    ok: boolean;
+    value: {
+        accessToken: string;
+        refreshToken: string;
+        user: User;
     }
 }
