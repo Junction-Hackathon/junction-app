@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
-import LoadingScreen from '@/components/LoadingScreen';
+import React, { useEffect } from "react";
+import { View, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
+import { useAuth } from "@/contexts/AuthContext";
+import LoadingScreen from "@/components/LoadingScreen";
+import { UserRole } from "@/types/user";
 
 export default function IndexScreen() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -11,14 +12,13 @@ export default function IndexScreen() {
   useEffect(() => {
     if (!isLoading) {
       if (isAuthenticated && user) {
-        // Navigate based on user role
-        if (user.role === 'sacrificer') {
-          router.replace('/(sacrificer)');
+        if (user.role === UserRole.DABAH) {
+          router.replace("/(sacrificer)");
         } else {
-          router.replace('/(donor)');
+          router.replace("/(donor)");
         }
       } else {
-        router.replace('/auth');
+        router.replace("/auth");
       }
     }
   }, [isAuthenticated, isLoading, user]);

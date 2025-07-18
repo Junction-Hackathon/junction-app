@@ -1,39 +1,58 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
-import { useAuth } from '@/contexts/AuthContext';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { ArrowLeft, Eye, EyeOff } from "lucide-react-native";
+import { useAuth } from "@/contexts/AuthContext";
+import { AxiosError } from "axios";
+import { Nullable } from "@/types";
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("donor@test.com");
+  const [password, setPassword] = useState("Test123@");
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  const { login } = useAuth();
+
+  const [globalError, setGlobalError] = useState<Nullable<string>>(null);
+
+  const { isLoading, login, error, user } = useAuth();
+
   const router = useRouter();
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert("Error", "Please fill in all fields");
       return;
     }
-
-    setIsLoading(true);
-    try {
-      await login({ email, password });
-    } catch (error) {
-      Alert.alert('Login Failed', 'Invalid credentials. Try:\nsacrificer@test.com or donor@test.com\nPassword: any');
-    } finally {
-      setIsLoading(false);
-    }
+    await login({ email, password });
   };
+
+  useEffect(() => {
+    if (!error) return;
+    console.log(error);
+    if (error instanceof AxiosError) {
+      if (error.status === 401)
+        return setGlobalError("Invalid email or password");
+    }
+    return setGlobalError("Unknown error.");
+  }, [error]);
+
+  useEffect(() => {
+    console.log(user);
+  }, [user]);
+
+  if (!isLoading && user !== null) return router.push("/");
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
@@ -81,13 +100,16 @@ export default function LoginScreen() {
             </View>
           </View>
 
-          <TouchableOpacity 
-            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+          <TouchableOpacity
+            style={[
+              styles.loginButton,
+              isLoading && styles.loginButtonDisabled,
+            ]}
             onPress={handleLogin}
             disabled={isLoading}
           >
             <Text style={styles.loginButtonText}>
-              {isLoading ? 'Signing In...' : 'Sign In'}
+              {isLoading ? "Signing In..." : "Sign In"}
             </Text>
           </TouchableOpacity>
 
@@ -99,9 +121,10 @@ export default function LoginScreen() {
           </View>
         </View>
 
-        <TouchableOpacity onPress={() => router.push('/auth/register')}>
+        <TouchableOpacity onPress={() => router.push("/auth/register")}>
           <Text style={styles.registerLink}>
-            Don't have an account? <Text style={styles.registerLinkBold}>Sign Up</Text>
+            Don't have an account?{" "}
+            <Text style={styles.registerLinkBold}>Sign Up</Text>
           </Text>
         </TouchableOpacity>
       </View>
@@ -112,11 +135,11 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#065F46',
+    backgroundColor: "#065F46",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 20,
     paddingTop: 10,
   },
@@ -125,16 +148,16 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   content: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   form: {
     flex: 1,
@@ -144,43 +167,43 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontWeight: "600",
+    color: "#1F2937",
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: "#F9FAFB",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    color: '#1F2937',
+    borderColor: "#E5E7EB",
+    color: "#1F2937",
   },
   passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F9FAFB",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: "#E5E7EB",
   },
   passwordInput: {
     flex: 1,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#1F2937',
+    color: "#1F2937",
   },
   eyeButton: {
     padding: 14,
   },
   loginButton: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: "#F59E0B",
     borderRadius: 12,
     paddingVertical: 16,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 8,
   },
   loginButtonDisabled: {
@@ -188,35 +211,35 @@ const styles = StyleSheet.create({
   },
   loginButtonText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
   demoCredentials: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: "#F0FDF4",
     borderRadius: 12,
     padding: 16,
     marginTop: 24,
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: "#BBF7D0",
   },
   demoTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#065F46',
+    fontWeight: "600",
+    color: "#065F46",
     marginBottom: 8,
   },
   demoText: {
     fontSize: 12,
-    color: '#047857',
+    color: "#047857",
     marginBottom: 2,
   },
   registerLink: {
     fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
+    color: "#6B7280",
+    textAlign: "center",
   },
   registerLinkBold: {
-    fontWeight: '600',
-    color: '#F59E0B',
+    fontWeight: "600",
+    color: "#F59E0B",
   },
 });
