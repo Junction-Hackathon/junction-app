@@ -1,1 +1,1 @@
-# junction-hackathon
+# junction-hackathon-app
