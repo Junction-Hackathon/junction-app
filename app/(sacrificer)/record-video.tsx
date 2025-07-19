@@ -7,14 +7,7 @@ import {
   RotateCcw,
   Check,
 } from "lucide-react-native";
-import React, {
-  useRef,
-  useState,
-  useEffect,
-  useCallback,
-  use,
-  Suspense,
-} from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { View, Button, StyleSheet, Text, TouchableOpacity } from "react-native";
 import {
   CameraType,
@@ -25,25 +18,31 @@ import {
 import * as MediaLibrary from "expo-media-library";
 import { Nullable } from "@/types";
 import CameraPermissionDialogBox from "@/components/CameraPermissionDialogBox";
-import NetInfo, { NetInfoStateType } from "@react-native-community/netinfo";
-import { dbManager, DbManager } from "@/db";
-import { useAuth } from "@/contexts/AuthContext";
+import NetInfo from "@react-native-community/netinfo";
+import { dbManager } from "@/db";
+import { useVideoSyncer } from "@/hooks/useVideoSyncer";
+import { videoStorage, VideoStorageManager } from "@/video-storage";
 import { API } from "@/api";
+import { IVideo } from "@/types/video";
 
 export default function CameraRecorder() {
   const router = useRouter();
 
-  const { donorId } = useLocalSearchParams();
-  const { user, error, isLoading } = useAuth();
+  const { sacrificeId } = useLocalSearchParams();
+
   const [facing, setFacing] = useState<CameraType>("back");
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [isRecording, setIsRecording] = useState(false);
   const [recordedVideo, setRecordedVideo] = useState<Nullable<string>>(null);
   const cameraRef = useRef<Nullable<CameraView>>(null);
+
   const [micPermission, requestMicrophonePermission] =
     useMicrophonePermissions();
+
   const [mediaPermission, setMediaPermission] =
     useState<Nullable<boolean>>(null);
+
+  const { state, notSynced } = useVideoSyncer();
 
   const getPermissions = useCallback(async () => {
     const mediaStatus = await MediaLibrary.requestPermissionsAsync();
@@ -57,49 +56,50 @@ export default function CameraRecorder() {
   }, []);
 
   const startRecording = async () => {
-    const recordVideo = async () => {
-      if (!cameraRef.current || isRecording) return;
+    if (!cameraRef.current || isRecording) return;
 
-      setIsRecording(true);
+    setIsRecording(true);
 
-      const video = await cameraRef.current.recordAsync();
-      if (!video || !video.uri) return;
+    const video = await cameraRef.current.recordAsync();
+    if (!video || !video.uri) return;
 
-      // save the file in the storage
-      await MediaLibrary.saveToLibraryAsync(video.uri);
+    setRecordedVideo(video.uri);
 
-      return video.uri;
+    // save the file in the storage
+    await MediaLibrary.saveToLibraryAsync(video.uri);
+
+    return video.uri;
+  };
+
+  const saveVideo = async () => {
+    if (recordedVideo === null) return;
+
+    const saveOnDb = async (video: IVideo) => {
+      notSynced();
+      return dbManager.saveVideo(video);
     };
 
-    const saveOnDb = async (uri: string) => {
-      // if its not connected, save the video in the local db
-      if (!state.isConnected) {
-        await dbManager.saveVideo({
-          uri,
-          donorId: donorId as string,
-        });
-      }
+    const saveOnServer = async (video: IVideo) => {
+      return API.Videos.uploadVideo(video);
     };
 
-    const uploadOnTheBackend = async (uri: string) => {
-      return dbManager.saveVideo({
-        uri,
-        donorId: donorId as string,
-      });
-    };
+    if (sacrificeId === undefined) return;
 
-    const all = async () => {
-      const uri = (await recordVideo()) as string;
-      const state = await NetInfo.fetch();
-      if (state.isConnected) return uploadOnTheBackend(uri);
-      return saveOnDb(uri);
-    };
+    const video = await videoStorage.saveVideoLocally(
+      recordedVideo,
+      sacrificeId as string
+    );
+
+    if (state.isConnected) await saveOnServer(video);
+    else await saveOnDb(video);
+
+    console.log("Video saved...");
   };
 
   const stopRecording = () => {
     if (cameraRef.current && isRecording) {
       cameraRef.current.stopRecording();
-      return router.push("/");
+      setIsRecording(false);
     }
   };
 
@@ -173,7 +173,7 @@ export default function CameraRecorder() {
             <RotateCcw size={20} color="#F59E0B" />
             <Text style={styles.retakeText}>Retake</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.saveButton} onPress={stopRecording}>
+          <TouchableOpacity style={styles.saveButton} onPress={saveVideo}>
             <Check size={20} color="#FFFFFF" />
             <Text style={styles.saveText}>Save Video</Text>
           </TouchableOpacity>

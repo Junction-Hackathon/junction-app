@@ -1,1 +1,4 @@
-export const ENV_KEYS = {}
+export const ENV_KEYS = {
+    LAST_SYNC_KEY: "LAST_SYNC_KEY",
+    VIDEO_UPLOAD_DIRECTORY: "VIDEO_UPLOAD_DIRECTORY"
+} as const;

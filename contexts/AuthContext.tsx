@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadStoredAuth = async () => {
     try {
       const storedUser = await AsyncStorage.getItem(STORAGE_KEYS.USER);
-      const storedToken = await AsyncStorage.getItem(STORAGE_KEYS.accessToken);
+      const storedToken = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
 
       if (storedUser && storedToken) {
         const user = JSON.parse(storedUser);
@@ -75,8 +75,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     await AsyncStorage.setItem(
-      STORAGE_KEYS.accessToken,
-      JSON.stringify(data.value.accessToken)
+      STORAGE_KEYS.ACCESS_TOKEN,
+      data.value.accessToken
     );
 
     setAuthState({
@@ -114,8 +114,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     await AsyncStorage.setItem(
-      STORAGE_KEYS.accessToken,
-      JSON.stringify(data.value.accessToken)
+      STORAGE_KEYS.REFRESH_TOKEN,
+      data.value.refreshToken
     );
 
     setAuthState({
@@ -128,7 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     await AsyncStorage.removeItem(STORAGE_KEYS.USER);
-    await AsyncStorage.removeItem(STORAGE_KEYS.accessToken);
+    await AsyncStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
     setAuthState({
       user: null,
       isLoading: false,

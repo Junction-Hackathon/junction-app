@@ -1,4 +1,4 @@
 export interface IVideo {
-    uri: string;
-    donorId: string;
+    filepath: string;
+    sacrificeId: string;
 }

@@ -9,13 +9,15 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { User, Bell, LogOut, ChevronRight } from "lucide-react-native";
 import { useAuth } from "@/contexts/AuthContext";
-import { Redirect } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 
 export default function DonorSettingsScreen() {
   const { user, logout } = useAuth();
+  const router = useRouter();
 
   const handleLogout = () => {
     logout();
+    return router.replace("/auth/login");
   };
 
   if (user === null) return <Redirect href="/auth/login" />;

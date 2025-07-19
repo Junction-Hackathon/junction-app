@@ -8,81 +8,39 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Search, Download, Wifi, WifiOff } from "lucide-react-native";
+import { Download, Wifi, WifiOff } from "lucide-react-native";
 import { useAuth } from "@/contexts/AuthContext";
 import SearchBar from "@/components/SearchBar";
-import DonorCard from "@/components/DonorCard";
-import { Donor } from "@/types/sacrifice";
-
-const mockDonors: Donor[] = [
-  {
-    id: "1",
-    name: "Ahmed Hassan",
-    email: "ahmed@example.com",
-    phone: "+92 300 1234567",
-    sheepId: "SH001",
-    sacrificeType: "goat",
-    amount: 25000,
-    region: "Karachi Central",
-    address: "Block A, Gulshan-e-Iqbal, Karachi",
-    notes: "Prefer morning sacrifice",
-  },
-  {
-    id: "2",
-    name: "Fatima Khan",
-    email: "fatima@example.com",
-    phone: "+92 300 2345678",
-    sheepId: "SH002",
-    sacrificeType: "sheep",
-    amount: 30000,
-    region: "Karachi Central",
-    address: "Defence Phase 2, Karachi",
-  },
-  {
-    id: "3",
-    name: "Ali Raza",
-    email: "ali@example.com",
-    phone: "+92 300 3456789",
-    sheepId: "SH003",
-    sacrificeType: "cow_share",
-    amount: 28000,
-    region: "Karachi Central",
-    address: "Clifton Block 5, Karachi",
-    notes: "Family of 6 members",
-  },
-];
+import SacrificeCard from "@/components/SacrificeCard";
+import { Sacrifice } from "@/types/sacrifice";
+import tryCatch from "@/utils/try-catch";
+import { API } from "@/api";
+import { useVideoSyncer } from "@/hooks/useVideoSyncer";
 
 export default function SacrificerDonorsScreen() {
   const { user } = useAuth();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [donors, setDonors] = useState<Donor[]>([]);
-  const [isOnline] = useState(true);
-  const [lastSync, setLastSync] = useState<Date | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [sacrifices, setSacrifices] = useState<Sacrifice[]>([]);
+  const { error, isUploading, notSynced, shouldSync, state, lastSync } =
+    useVideoSyncer();
 
   useEffect(() => {
-    setDonors(mockDonors);
-    setLastSync(new Date());
+    const load = async () => {
+      const [sacrifices, err] = await tryCatch(() =>
+        API.Sacrifices.fetchSacrifices()
+      );
+
+      if (sacrifices === null || err !== null) {
+        console.log(err);
+        return;
+      }
+
+      return setSacrifices(sacrifices);
+    };
+    load();
   }, []);
 
-  const filteredDonors = donors.filter(
-    (donor) =>
-      donor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      donor.sheepId.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const handleSyncData = () => {
-    Alert.alert("Sync Data", "Download latest donor list from server?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Download",
-        onPress: () => {
-          // Simulate data sync
-          setLastSync(new Date());
-          Alert.alert("Success", "Donor list updated successfully");
-        },
-      },
-    ]);
-  };
+  const handleSyncData = () => {};
 
   return (
     <SafeAreaView style={styles.container}>
@@ -93,7 +51,7 @@ export default function SacrificerDonorsScreen() {
             <Text style={styles.userName}>{user?.firstName}</Text>
           </View>
           <View style={styles.connectionStatus}>
-            {isOnline ? (
+            {state.isConnected ? (
               <Wifi size={20} color="#10B981" />
             ) : (
               <WifiOff size={20} color="#EF4444" />
@@ -101,10 +59,10 @@ export default function SacrificerDonorsScreen() {
             <Text
               style={[
                 styles.statusText,
-                { color: isOnline ? "#10B981" : "#EF4444" },
+                { color: state.isConnected ? "#10B981" : "#EF4444" },
               ]}
             >
-              {isOnline ? "Online" : "Offline"}
+              {state.isConnected ? "Online" : "Offline"}
             </Text>
           </View>
         </View>
@@ -132,29 +90,8 @@ export default function SacrificerDonorsScreen() {
 
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{filteredDonors.length}</Text>
+          <Text style={styles.statNumber}>{sacrifices.length}</Text>
           <Text style={styles.statLabel}>Total Donors</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>
-            {filteredDonors.filter((d) => d.sacrificeType === "goat").length}
-          </Text>
-          <Text style={styles.statLabel}>Goats</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>
-            {filteredDonors.filter((d) => d.sacrificeType === "sheep").length}
-          </Text>
-          <Text style={styles.statLabel}>Sheep</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>
-            {
-              filteredDonors.filter((d) => d.sacrificeType === "cow_share")
-                .length
-            }
-          </Text>
-          <Text style={styles.statLabel}>Cow Shares</Text>
         </View>
       </View>
 
@@ -163,8 +100,8 @@ export default function SacrificerDonorsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.donorsList}>
-          {filteredDonors.map((donor) => (
-            <DonorCard key={donor.id} donor={donor} />
+          {sacrifices.map((sacrifice) => (
+            <SacrificeCard key={sacrifice.id} sacrifice={sacrifice} />
           ))}
         </View>
       </ScrollView>
