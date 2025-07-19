@@ -6,8 +6,13 @@ import { useVideoSyncer } from "@/hooks/useVideoSyncer";
 import { useEffect, useState } from "react";
 import { dbManager } from "@/db";
 import NetInfo from "@react-native-community/netinfo";
-import { View, ActivityIndicator } from "react-native";
+import { View, ActivityIndicator, Text } from "react-native";
 import { videoStorage } from "@/video-storage";
+import Toast, {
+  BaseToast,
+  ErrorToast,
+  ToastConfig,
+} from "react-native-toast-message";
 
 export default function RootLayout() {
   useFrameworkReady();
@@ -45,6 +50,7 @@ export default function RootLayout() {
         }}
       >
         <ActivityIndicator size="large" color="white" />
+        <Toast />
       </View>
     );
   }
@@ -59,6 +65,54 @@ export default function RootLayout() {
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="light" />
+      <Toast config={toastConfig} />
     </AuthProvider>
   );
 }
+
+export const toastConfig: ToastConfig = {
+  success: (props) => (
+    <BaseToast
+      {...props}
+      style={{ borderLeftColor: "green" }}
+      contentContainerStyle={{ paddingHorizontal: 15 }}
+      text1Style={{
+        fontSize: 16,
+        fontWeight: "600",
+      }}
+      text2Style={{
+        fontSize: 14,
+        color: "gray",
+      }}
+    />
+  ),
+
+  error: (props) => (
+    <ErrorToast
+      {...props}
+      style={{ borderLeftColor: "red" }}
+      text1Style={{
+        fontSize: 16,
+        fontWeight: "600",
+      }}
+      text2Style={{
+        fontSize: 14,
+      }}
+    />
+  ),
+
+  info: ({ text1, text2, ...rest }) => (
+    <View
+      style={{
+        height: 60,
+        backgroundColor: "#2f86f6",
+        borderRadius: 8,
+        padding: 10,
+        justifyContent: "center",
+      }}
+    >
+      <Text style={{ color: "white", fontWeight: "bold" }}>{text1}</Text>
+      {text2 ? <Text style={{ color: "white" }}>{text2}</Text> : null}
+    </View>
+  ),
+};

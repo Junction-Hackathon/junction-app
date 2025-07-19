@@ -15,8 +15,8 @@ import { AxiosError } from "axios";
 import { Nullable } from "@/types";
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState("donor@test.com");
-  const [password, setPassword] = useState("Test123@");
+  const [email, setEmail] = useState("dba7@test.com");
+  const [password, setPassword] = useState("password123");
   const [showPassword, setShowPassword] = useState(false);
 
   const [globalError, setGlobalError] = useState<Nullable<string>>(null);

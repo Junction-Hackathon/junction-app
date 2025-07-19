@@ -28,7 +28,7 @@ const _messages = [
 type MessageT = (typeof _messages)[0];
 
 export default function ChatBotScreen() {
-  const [messageContent, setMessageContent] = useState<string>("");
+  const [messageContent, setMessageContent] = useState<string>("Can you tell me more about eid al adha?");
 
   const [messages, setMessages] = useState<MessageT[]>(_messages);
   const pushMessage = (from: string, content: string) =>

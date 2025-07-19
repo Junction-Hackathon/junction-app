@@ -24,11 +24,14 @@ import { useVideoSyncer } from "@/hooks/useVideoSyncer";
 import { videoStorage, VideoStorageManager } from "@/video-storage";
 import { API } from "@/api";
 import { IVideo } from "@/types/video";
+import Toast from "react-native-toast-message";
 
 export default function CameraRecorder() {
   const router = useRouter();
 
   const { sacrificeId } = useLocalSearchParams();
+
+  const [success, setSuccess] = useState<Nullable<boolean>>(null);
 
   const [facing, setFacing] = useState<CameraType>("back");
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -58,6 +61,7 @@ export default function CameraRecorder() {
   const startRecording = async () => {
     if (!cameraRef.current || isRecording) return;
 
+    setSuccess(null);
     setIsRecording(true);
 
     const video = await cameraRef.current.recordAsync();
@@ -76,11 +80,13 @@ export default function CameraRecorder() {
 
     const saveOnDb = async (video: IVideo) => {
       notSynced();
-      return dbManager.saveVideo(video);
+      await dbManager.saveVideo(video);
+      setSuccess(true);
     };
 
     const saveOnServer = async (video: IVideo) => {
-      return API.Videos.uploadVideo(video);
+      await API.Videos.uploadVideo(video);
+      setSuccess(true);
     };
 
     if (sacrificeId === undefined) return;
@@ -119,6 +125,14 @@ export default function CameraRecorder() {
   const toggleCameraFacing = () => {
     setFacing((current) => (current === "back" ? "front" : "back"));
   };
+
+  useEffect(() => {
+    if (success === true) {
+      Toast.show({
+        text1: "Video uploaded successfully.",
+      });
+    }
+  }, [success]);
 
   if (!cameraPermission || !micPermission || mediaPermission === null) {
     return (
