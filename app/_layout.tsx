@@ -1,29 +1,53 @@
-import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useFrameworkReady } from "@/hooks/useFrameworkReady";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { dbManager } from "@/db";
 import { useVideoSyncer } from "@/hooks/useVideoSyncer";
-import { videoStorage } from "@/video-storage";
+import { useEffect, useState } from "react";
+import { dbManager } from "@/db";
 import NetInfo from "@react-native-community/netinfo";
+import { View, ActivityIndicator } from "react-native";
+import { videoStorage } from "@/video-storage";
 
 export default function RootLayout() {
   useFrameworkReady();
+  const [isInitialized, setIsInitialized] = useState(false);
   const { sync } = useVideoSyncer();
 
   useEffect(() => {
-    dbManager.init();
-    videoStorage.init();
-  }, []);
+    const init = async () => {
+      await dbManager.init();
+      await videoStorage.init();
+      setIsInitialized(true);
+    };
 
-  useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(async (state) => {
       if (!state.isConnected) return;
-      return sync();
+      try {
+        await sync();
+      } catch (err) {
+        console.log(err);
+      }
     });
+
+    init();
     return () => unsubscribe();
-  }, []);
+  }, [sync]);
+
+  if (!isInitialized) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#065F46",
+        }}
+      >
+        <ActivityIndicator size="large" color="white" />
+      </View>
+    );
+  }
 
   return (
     <AuthProvider>
@@ -34,7 +58,7 @@ export default function RootLayout() {
         <Stack.Screen name="(donor)" />
         <Stack.Screen name="+not-found" />
       </Stack>
-      <StatusBar style="light" backgroundColor="#065F46" />
+      <StatusBar style="light" />
     </AuthProvider>
   );
 }

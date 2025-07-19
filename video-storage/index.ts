@@ -5,12 +5,11 @@ export class VideoStorageManager {
   private videoDir: string;
 
   constructor() {
-    this.videoDir = "app-videos";
+    this.videoDir = FileSystem.documentDirectory as string;
   }
 
   async init() {
     await FileSystem.makeDirectoryAsync(this.videoDir, { intermediates: true });
-    return this;
   }
 
   async saveVideoLocally(videoUri: string, sacrificeId?: string): Promise<IVideo> {

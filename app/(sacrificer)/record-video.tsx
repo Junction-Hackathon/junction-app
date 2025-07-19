@@ -85,15 +85,24 @@ export default function CameraRecorder() {
 
     if (sacrificeId === undefined) return;
 
+    if (state.isConnected) {
+      await saveOnServer({
+        filepath: recordedVideo,
+        sacrificeId: sacrificeId as string,
+      });
+      setRecordedVideo(null);
+      return console.log("Saved...");
+    }
+
     const video = await videoStorage.saveVideoLocally(
       recordedVideo,
       sacrificeId as string
     );
 
-    if (state.isConnected) await saveOnServer(video);
-    else await saveOnDb(video);
+    await saveOnDb(video);
+    setRecordedVideo(null);
 
-    console.log("Video saved...");
+    console.log("Saved...");
   };
 
   const stopRecording = () => {

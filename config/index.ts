@@ -7,7 +7,11 @@ export class Config {
         return value
     }
 
-    static getAPIURL() {
-        return Config.getOrThrow("API_URL");
+    static getBackendAPIURL() {
+        return Config.getOrThrow("BACKEND_API_URL");
+    }
+
+    static getChatbotAPIURL() {
+        return Config.getOrThrow("CHATBOT_API_URL");
     }
 }

@@ -7,6 +7,8 @@ import { Nullable } from "@/types";
 import tryCatch from "@/utils/try-catch";
 import { IVideo } from "@/types/video";
 import { useNetInfo } from "@react-native-community/netinfo";
+import { API } from "@/api";
+import { Video } from "lucide-react-native";
 
 const SYNC_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -34,22 +36,15 @@ export const useVideoSyncer = () => {
     if (pendingVideos.length === 0) return;
 
     setIsUploading(true);
-    const destDir = ENV_KEYS.VIDEO_UPLOAD_DIRECTORY;
 
-    for (const video of pendingVideos as IVideo[]) {
-      const filename = video.filepath.split("/").pop();
-      const destPath = `${destDir}/${filename}`;
-
-      const [_, copyErr] = await tryCatch(() =>
-        FileSystem.copyAsync({ from: video.filepath, to: destPath })
-      );
-
-      if (copyErr) {
-        console.error("Copy failed for", video.filepath);
-        continue;
-      }
+    for (const video of pendingVideos as any[]) {
+      await API.Videos.uploadVideo({
+        filepath: video.file_path,
+        sacrificeId: video.sacrificer_id
+      });
 
       await dbManager.markAsSynced(video.filepath);
+      console.log("Synced...");
     }
 
     setLastSync(new Date());

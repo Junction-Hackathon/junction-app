@@ -1,45 +1,45 @@
-import { Tabs } from 'expo-router';
-import { Video, Settings } from 'lucide-react-native';
+import { Tabs } from "expo-router";
+import { Video, Settings, Bot } from "lucide-react-native";
 
 export default function DonorLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#F59E0B',
-        tabBarInactiveTintColor: '#6B7280',
+        tabBarActiveTintColor: "#F59E0B",
+        tabBarInactiveTintColor: "#6B7280",
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
+          backgroundColor: "#FFFFFF",
           borderTopWidth: 1,
-          borderTopColor: '#E5E7EB',
+          borderTopColor: "#E5E7EB",
           paddingTop: 8,
           paddingBottom: 8,
           height: 70,
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '500',
+          fontWeight: "500",
           marginTop: 4,
         },
-      }}>
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'My Videos',
-          tabBarIcon: ({ size, color }) => (
-            <Video size={size} color={color} />
-          ),
+          title: "My Videos",
+          tabBarIcon: ({ size, color }) => <Video size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
+          title: "Settings",
           tabBarIcon: ({ size, color }) => (
             <Settings size={size} color={color} />
           ),
         }}
       />
+      
     </Tabs>
   );
 }
